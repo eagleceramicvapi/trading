@@ -634,7 +634,7 @@ def get_logs():
     with APP_STATE["lock"]:
         logs = list(APP_STATE["logs"])
     return jsonify({"logs": logs})
+load_csv_data()
 
 if __name__ == "__main__":
-    load_csv_data()
     app.run(host='0.0.0.0', port=5000, debug=True)
