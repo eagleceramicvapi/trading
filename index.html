@@ -3,317 +3,417 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Bot Control Panel</title>
+    <title>Trading Bot Control Panel - Modern Dark UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
+        /* Custom styles for a more modern look and feel */
         body {
-            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* A deep, dark blue-gray */
         }
-        .log-panel {
-            height: 300px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.8rem;
+        .glassmorphism {
+            background: rgba(45, 55, 72, 0.4); /* Darker glass effect */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .status-card {
-            background-color: #1F2937; /* gray-800 */
-            border: 1px solid #374151; /* gray-700 */
+        .form-input, .form-select {
+            background-color: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #e2e8f0; /* Light gray text */
         }
-        .positive-pnl { color: #22C55E; } /* green-500 */
-        .negative-pnl { color: #EF4444; } /* red-500 */
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #6366f1; /* Indigo */
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+        }
+        /* FIX: Style for dropdown options */
+        select option {
+            background: #2d3748; /* bg-gray-800 */
+            color: #e2e8f0; /* text-gray-200 */
+        }
+        .status-positive { color: #4ade80; /* Green-400 */ }
+        .status-negative { color: #f87171; /* Red-400 */ }
+
+        /* Modal Styles */
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        .modal-content {
+            transition: transform 0.25s ease;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="text-gray-300 font-sans">
+    
+    <div id="config-modal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden">
+        <div class="modal-content w-full max-w-md p-6 mx-auto bg-gray-900 border border-gray-700 rounded-2xl shadow-xl transform scale-95">
+            <div class="flex items-center justify-between mb-6 border-b border-gray-700 pb-3">
+                <h2 class="text-2xl font-semibold text-white">Configuration</h2>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="exchange" class="block text-sm font-medium text-gray-400">Exchange</label>
+                    <select id="exchange" class="mt-1 block w-full p-3 form-select rounded-md">
+                        <option value="N">NSE</option>
+                        <option value="B">BSE</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="expiry" class="block text-sm font-medium text-gray-400">Expiry Date</label>
+                    <select id="expiry" class="mt-1 block w-full p-3 form-select rounded-md">
+                        <option value="">Select Expiry</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="scrip_type" class="block text-sm font-medium text-gray-400">Scrip Type</label>
+                    <select id="scrip_type" class="mt-1 block w-full p-3 form-select rounded-md">
+                        <option value="">Select Scrip Type</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="strike_rate" class="block text-sm font-medium text-gray-400">Strike Rate</label>
+                    <select id="strike_rate" class="mt-1 block w-full p-3 form-select rounded-md">
+                        <option value="">Select Strike Rate</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="scrip_code" class="block text-sm font-medium text-gray-400">Scrip Code</label>
+                    <input type="text" id="scrip_code" class="mt-1 block w-full p-3 form-input rounded-md" readonly>
+                </div>
+                <div>
+                    <label for="lot_size" class="block text-sm font-medium text-gray-400">Lot Size</label>
+                    <input type="number" id="lot_size" class="mt-1 block w-full p-3 form-input rounded-md" readonly>
+                </div>
+                <div>
+                    <label for="initial_quantity" class="block text-sm font-medium text-gray-400">Initial Quantity</label>
+                    <input type="number" id="initial_quantity" class="mt-1 block w-full p-3 form-input rounded-md" value="75">
+                </div>
+                <div class="flex items-center pt-2">
+                    <input type="checkbox" id="dummy_mode" class="h-4 w-4 rounded text-indigo-500 focus:ring-indigo-500 border-gray-600 bg-gray-700">
+                    <label for="dummy_mode" class="ml-3 text-sm font-medium text-gray-400">Enable Dummy Mode</label>
+                </div>
+            </div>
+             <div class="mt-6">
+                <button id="apply-config-btn" class="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-300">
+                    Apply & Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-white">Trading Bot Control Panel</h1>
-            <p class="text-gray-400 mt-2">Monitor and control your automated trading strategy in real-time.</p>
+        <header class="flex flex-col sm:flex-row items-center justify-between mb-10 gap-4">
+            <div>
+                 <h1 class="text-3xl font-bold text-white">Trading Dashboard</h1>
+                 <div id="bot_status" class="mt-1 text-lg font-medium">Status: <span class="text-gray-400">Idle</span></div>
+            </div>
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <button id="start_bot" class="bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition duration-300 shadow-md">Start</button>
+                <button id="stop_bot" class="bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition duration-300 shadow-md">Stop</button>
+                <button id="open-config-btn" class="p-2.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition duration-300 shadow-md">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+            </div>
         </header>
 
-        <!-- Configuration and Controls -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="md:col-span-2 p-6 rounded-lg bg-gray-800 border border-gray-700 shadow-lg">
-                <h2 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2">Configuration</h2>
-                <form id="config-form" class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label for="scrip-code" class="block text-sm font-medium text-gray-300">Scrip Code</label>
-                            <input type="number" id="scrip-code" value="889288" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white p-2">
-                        </div>
-                        <div>
-                            <label for="exchange" class="block text-sm font-medium text-gray-300">Exchange</label>
-                            <select id="exchange" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white p-2">
-                                <option>BSE</option>
-                                <option>NSE</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="initial-qty" class="block text-sm font-medium text-gray-300">Initial Quantity</label>
-                            <input type="number" id="initial-qty" value="20" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white p-2">
-                        </div>
-                        <div>
-                            <label for="lot-size" class="block text-sm font-medium text-gray-300">Lot Size</label>
-                            <input type="number" id="lot-size" value="20" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white p-2">
-                        </div>
+        <div class="space-y-8">
+            <div class="glassmorphism p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Current Scrip Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Scrip Name</p>
+                        <p id="info_scrip_name" class="text-lg font-bold text-white mt-1 truncate" title="-">-</p>
                     </div>
-                     <div class="flex items-center pt-2">
-                        <input id="dummy-mode" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-500 rounded bg-gray-700" checked>
-                        <label for="dummy-mode" class="ml-2 block text-sm text-gray-300">Enable Dummy Mode (No real trades)</label>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Scrip Code</p>
+                        <p id="info_scrip_code" class="text-lg font-bold text-white mt-1">-</p>
                     </div>
-                </form>
-            </div>
-            <div class="p-6 rounded-lg bg-gray-800 border border-gray-700 shadow-lg flex flex-col justify-center items-center">
-                 <h2 class="text-xl font-semibold mb-4">Controls</h2>
-                 <div class="flex flex-col space-y-4 w-full">
-                    <button id="start-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out shadow-md">
-                        Start Bot
-                    </button>
-                    <button id="stop-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out shadow-md" disabled>
-                        Stop Bot
-                    </button>
-                 </div>
-                 <div id="bot-status-indicator" class="mt-4 text-center">
-                     <span class="text-gray-400 font-medium">Status: Idle</span>
-                 </div>
-            </div>
-        </div>
-        
-        <!-- Live Status -->
-        <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4">Live Status</h2>
-            <div id="status-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <!-- Status cards will be injected here by JS -->
-                <div class="status-card p-4 rounded-lg text-center"><h3 class="text-sm text-gray-400">Current LTP</h3><p id="current-ltp" class="text-2xl font-bold">-</p></div>
-                <div class="status-card p-4 rounded-lg text-center"><h3 class="text-sm text-gray-400">Avg. Price</h3><p id="avg-price" class="text-2xl font-bold">-</p></div>
-                <div class="status-card p-4 rounded-lg text-center"><h3 class="text-sm text-gray-400">Quantity</h3><p id="current-qty" class="text-2xl font-bold">-</p></div>
-                <div class="status-card p-4 rounded-lg text-center"><h3 class="text-sm text-gray-400">Unrealized PnL</h3><p id="unrealized-pnl" class="text-2xl font-bold">-</p></div>
-                <div class="status-card p-4 rounded-lg text-center"><h3 class="text-sm text-gray-400">Realized PnL</h3><p id="realized-pnl" class="text-2xl font-bold">-</p></div>
-                <div class="status-card p-4 rounded-lg text-center"><h3 class="text-sm text-gray-400">Net PnL</h3><p id="net-pnl" class="text-2xl font-bold">-</p></div>
-            </div>
-        </div>
-
-        <!-- Orders and Logs -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-                <h2 class="text-xl font-semibold mb-4">Order History</h2>
-                <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-gray-700 text-xs text-gray-300 uppercase">
-                                <tr>
-                                    <th class="px-4 py-3">Timestamp</th>
-                                    <th class="px-4 py-3">Side</th>
-                                    <th class="px-4 py-3">Qty</th>
-                                    <th class="px-4 py-3">Price</th>
-                                    <th class="px-4 py-3">Order ID</th>
-                                </tr>
-                            </thead>
-                            <tbody id="orders-table-body" class="divide-y divide-gray-700">
-                                <tr><td colspan="5" class="text-center p-4 text-gray-500">No orders yet.</td></tr>
-                            </tbody>
-                        </table>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Initial Qty</p>
+                        <p id="info_initial_qty" class="text-lg font-bold text-white mt-1">-</p>
                     </div>
                 </div>
             </div>
-            <div>
-                 <h2 class="text-xl font-semibold mb-4">Live Logs</h2>
-                 <div id="log-panel" class="bg-black p-4 rounded-lg border border-gray-700 overflow-y-scroll log-panel">
-                     <p class="text-gray-500">Logs will appear here when the bot is running...</p>
-                 </div>
+
+            <div class="glassmorphism p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-6">Live Status</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-6 text-center">
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Current LTP</p>
+                        <p id="current_ltp" class="text-2xl font-bold text-white mt-1">-</p>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Avg. Price</p>
+                        <p id="avg_price" class="text-2xl font-bold text-white mt-1">-</p>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Quantity</p>
+                        <p id="quantity" class="text-2xl font-bold text-white mt-1">-</p>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Unrealized PnL</p>
+                        <p id="unrealized_pnl" class="text-2xl font-bold text-white mt-1">-</p>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Realized PnL</p>
+                        <p id="realized_pnl" class="text-2xl font-bold text-white mt-1">-</p>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <p class="text-sm font-medium text-gray-400">Net PnL</p>
+                        <p id="net_pnl" class="text-2xl font-bold text-white mt-1">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glassmorphism p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-6">Order History</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="p-3 font-semibold">Timestamp</th>
+                                <th class="p-3 font-semibold">Side</th>
+                                <th class="p-3 font-semibold">Qty</th>
+                                <th class="p-3 font-semibold">Price</th>
+                                <th class="p-3 font-semibold">Order ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order_history">
+                            <tr><td colspan="5" class="text-center p-4 text-gray-500">No orders yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glassmorphism p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-6">Live Logs</h2>
+                <div id="logs" class="h-48 overflow-y-auto bg-gray-900/50 p-4 rounded-md font-mono text-sm">
+                    <p class="text-gray-500">Logs will appear here when the bot is running...</p>
+                </div>
             </div>
         </div>
-
     </div>
 
     <script>
-        // --- DOM Elements ---
-        const startBtn = document.getElementById('start-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const configForm = document.getElementById('config-form');
-        const statusIndicator = document.getElementById('bot-status-indicator');
+        $(document).ready(function() {
+            // Modal Management
+            const modal = $('#config-modal');
+            const openBtn = $('#open-config-btn');
+            const closeBtn = $('#close-modal-btn');
+            const applyBtn = $('#apply-config-btn');
 
-        const currentLtpEl = document.getElementById('current-ltp');
-        const avgPriceEl = document.getElementById('avg-price');
-        const currentQtyEl = document.getElementById('current-qty');
-        const unrealizedPnlEl = document.getElementById('unrealized-pnl');
-        const realizedPnlEl = document.getElementById('realized-pnl');
-        const netPnlEl = document.getElementById('net-pnl');
-        
-        const ordersTableBody = document.getElementById('orders-table-body');
-        const logPanel = document.getElementById('log-panel');
-
-        // --- State ---
-        let statusInterval;
-        let logsInterval;
-        let ordersInterval;
-
-        // --- Utility Functions ---
-        function formatPnl(element, value) {
-            const num = parseFloat(value);
-            element.textContent = num.toFixed(2);
-            element.classList.remove('positive-pnl', 'negative-pnl');
-            if (num > 0) {
-                element.classList.add('positive-pnl');
-            } else if (num < 0) {
-                element.classList.add('negative-pnl');
+            function openModal() {
+                modal.removeClass('hidden');
+                setTimeout(() => modal.removeClass('opacity-0').find('.modal-content').removeClass('scale-95'), 10);
             }
-        }
 
-        // --- API Functions ---
-        async function fetchWithTimeout(resource, options = {}, timeout = 8000) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            const response = await fetch(resource, {
-                ...options,
-                signal: controller.signal  
+            function closeModal() {
+                modal.addClass('opacity-0').find('.modal-content').addClass('scale-95');
+                setTimeout(() => modal.addClass('hidden'), 250);
+            }
+
+            openBtn.click(openModal);
+            closeBtn.click(closeModal);
+            applyBtn.click(closeModal);
+
+            function updateInfoPanel(name, code, qty) {
+                $('#info_scrip_name').text(name || '-').attr('title', name || '-');
+                $('#info_scrip_code').text(code || '-');
+                $('#info_initial_qty').text(qty || '-');
+            }
+
+            // Existing Logic
+            function updateDropdowns() {
+                const exchange = $('#exchange').val();
+                $.get('/get_expiry_dates', { exchange: exchange }, function(data) {
+                    if (data.error) { alert(data.error); return; }
+                    $('#expiry').empty().append('<option value="">Select Expiry</option>');
+                    data.forEach(expiry => $('#expiry').append(`<option value="${expiry}">${expiry}</option>`));
+                    $('#scrip_type').empty().append('<option value="">Select Scrip Type</option>');
+                    $('#strike_rate').empty().append('<option value="">Select Strike Rate</option>');
+                    $('#scrip_code').val('');
+                    $('#lot_size').val('');
+                }).fail(() => alert('Failed to fetch expiry dates.'));
+            }
+
+            $('#exchange').change(updateDropdowns);
+
+            $('#expiry').change(function() {
+                const exchange = $('#exchange').val();
+                const expiry = $(this).val();
+                if (expiry) {
+                    $.get('/get_scrip_types', { exchange: exchange, expiry: expiry }, function(data) {
+                        if (data.error) { alert(data.error); return; }
+                        $('#scrip_type').empty().append('<option value="">Select Scrip Type</option>');
+                        data.forEach(type => $('#scrip_type').append(`<option value="${type}">${type}</option>`));
+                        $('#strike_rate').empty().append('<option value="">Select Strike Rate</option>');
+                    }).fail(() => alert('Failed to fetch scrip types.'));
+                }
             });
-            clearTimeout(id);
-            return response;
-        }
 
-        async function startBot() {
-            const config = {
-                scrip_code: parseInt(document.getElementById('scrip-code').value, 10),
-                exchange: document.getElementById('exchange').value,
-                initial_quantity: parseInt(document.getElementById('initial-qty').value, 10),
-                lot_size: parseInt(document.getElementById('lot-size').value, 10),
-                dummy_mode: document.getElementById('dummy-mode').checked,
-            };
-
-            if (isNaN(config.scrip_code) || isNaN(config.initial_quantity) || isNaN(config.lot_size)) {
-                alert("Please ensure all numeric fields are filled correctly.");
-                return;
-            }
-
-            try {
-                const response = await fetchWithTimeout('/start', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                });
-
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const data = await response.json();
-                console.log(data.message);
-                
-                // Update UI to reflect running state
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                Array.from(configForm.elements).forEach(el => el.disabled = true);
-                statusIndicator.innerHTML = '<span class="text-green-400 font-bold">Status: Running</span>';
-
-                // Start polling for updates
-                updateStatus();
-                updateOrders();
-                updateLogs();
-                statusInterval = setInterval(updateStatus, 2000); // Poll status every 2s
-                ordersInterval = setInterval(updateOrders, 5000); // Poll orders every 5s
-                logsInterval = setInterval(updateLogs, 1500); // Poll logs every 1.5s
-            } catch (error) {
-                console.error("Failed to start bot:", error);
-                alert(`Failed to start bot: ${error.message}`);
-            }
-        }
-
-        async function stopBot() {
-             try {
-                const response = await fetchWithTimeout('/stop', { method: 'POST' });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const data = await response.json();
-                console.log(data.message);
-
-                // Update UI to reflect stopped state
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                Array.from(configForm.elements).forEach(el => el.disabled = false);
-                statusIndicator.innerHTML = '<span class="text-gray-400 font-medium">Status: Idle</span>';
-                
-                // Stop polling
-                clearInterval(statusInterval);
-                clearInterval(ordersInterval);
-                clearInterval(logsInterval);
-            } catch (error) {
-                console.error("Failed to stop bot:", error);
-                alert(`Failed to stop bot: ${error.message}`);
-            }
-        }
-
-        async function updateStatus() {
-            try {
-                const response = await fetchWithTimeout('/status');
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                
-                if (data.bot_running) {
-                    currentLtpEl.textContent = data.current_ltp.toFixed(2);
-                    avgPriceEl.textContent = data.portfolio_status.current_average_price.toFixed(2);
-                    currentQtyEl.textContent = data.portfolio_status.current_total_quantity;
-                    
-                    formatPnl(unrealizedPnlEl, data.portfolio_status.unrealized_pnl);
-                    formatPnl(realizedPnlEl, data.portfolio_status.realized_pnl);
-                    formatPnl(netPnlEl, data.portfolio_status.net_pnl);
+            $('#scrip_type').change(function() {
+                const exchange = $('#exchange').val();
+                const expiry = $('#expiry').val();
+                const scrip_type = $(this).val();
+                if (scrip_type) {
+                    $.get('/get_strike_rates', { exchange: exchange, expiry: expiry, scrip_type: scrip_type }, function(data) {
+                        if (data.error) { alert(data.error); return; }
+                        $('#strike_rate').empty().append('<option value="">Select Strike Rate</option>');
+                        data.forEach(rate => $('#strike_rate').append(`<option value="${rate}">${rate}</option>`));
+                    }).fail(() => alert('Failed to fetch strike rates.'));
                 }
-            } catch (error) {
-                console.warn("Could not fetch status:", error.message);
-            }
-        }
-        
-        async function updateOrders() {
-             try {
-                const response = await fetchWithTimeout('/orders');
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
+            });
 
-                if(data.orders && data.orders.length > 0) {
-                    ordersTableBody.innerHTML = ''; // Clear existing
-                    // Show latest orders first
-                    data.orders.reverse().forEach(order => {
-                        const row = document.createElement('tr');
-                        row.className = order.side === 'BUY' ? 'bg-green-900 bg-opacity-30' : 'bg-red-900 bg-opacity-30';
-                        row.innerHTML = `
-                            <td class="px-4 py-2">${order.timestamp}</td>
-                            <td class="px-4 py-2 font-bold ${order.side === 'BUY' ? 'text-green-400' : 'text-red-400'}">${order.side}</td>
-                            <td class="px-4 py-2">${order.quantity}</td>
-                            <td class="px-4 py-2">${parseFloat(order.price).toFixed(2)}</td>
-                            <td class="px-4 py-2 text-gray-400">${order.order_id}</td>
-                        `;
-                        ordersTableBody.appendChild(row);
-                    });
-                } else {
-                    ordersTableBody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">No orders yet.</td></tr>';
+            $('#strike_rate').change(function() {
+                const exchange = $('#exchange').val();
+                const expiry = $('#expiry').val();
+                const scrip_type = $('#scrip_type').val();
+                const strike_rate = $(this).val();
+                if (strike_rate) {
+                    $.get('/get_script_details', { exchange: exchange, expiry: expiry, scrip_type: scrip_type, strike_rate: strike_rate }, function(data) {
+                        if (data.error) {
+                            alert(data.error);
+                            $('#scrip_code').val('');
+                            $('#lot_size').val('');
+                        } else {
+                            $('#scrip_code').val(data.scrip_code);
+                            $('#lot_size').val(data.lot_size);
+                            updateInfoPanel(data.name, data.scrip_code, $('#initial_quantity').val());
+                        }
+                    }).fail(() => alert('Failed to fetch script details.'));
                 }
-             } catch (error) {
-                console.warn("Could not fetch orders:", error.message);
-             }
-        }
+            });
 
-        async function updateLogs() {
-             try {
-                const response = await fetchWithTimeout('/logs');
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                
-                if(data.logs && data.logs.length > 0) {
-                    if (logPanel.childElementCount === 1 && logPanel.firstChild.textContent.includes('Logs will appear')) {
-                        logPanel.innerHTML = '';
+            $('#initial_quantity').on('input', function() {
+                $('#info_initial_qty').text($(this).val());
+            });
+
+            $('#start_bot').click(function() {
+                const config = {
+                    scrip_code: $('#scrip_code').val(),
+                    exchange: $('#exchange').val() === 'N' ? 'NSE' : 'BSE',
+                    lot_size: $('#lot_size').val(),
+                    initial_quantity: $('#initial_quantity').val(),
+                    dummy_mode: $('#dummy_mode').is(':checked')
+                };
+
+                if (!config.scrip_code || !config.lot_size || config.lot_size <= 0 || !config.initial_quantity || config.initial_quantity <= 0) {
+                    alert('Please complete the configuration in the settings menu before starting.');
+                    openModal();
+                    return;
+                }
+
+                $.ajax({
+                    url: '/start',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(config),
+                    success: function(data) {
+                        alert(data.message);
+                        if (data.status === 'success') {
+                            $('#bot_status').html('Status: <span class="text-green-400">Running</span>');
+                            pollStatus();
+                            pollOrders();
+                            pollLogs();
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMsg = 'Failed to start bot.';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.message) { errorMsg = response.message; }
+                        } catch (e) {}
+                        alert(errorMsg);
                     }
-                    logPanel.innerHTML = data.logs.join('<br>');
-                    logPanel.scrollTop = logPanel.scrollHeight; // Auto-scroll to bottom
-                }
-             } catch (error) {
-                 console.warn("Could not fetch logs:", error.message);
-             }
-        }
+                });
+            });
 
-        // --- Event Listeners ---
-        startBtn.addEventListener('click', startBot);
-        stopBtn.addEventListener('click', stopBot);
+            $('#stop_bot').click(function() {
+                $.post('/stop', {}, function(data) {
+                    alert(data.message);
+                    if (data.status === 'success') {
+                        $('#bot_status').html('Status: <span class="text-red-400">Stopped</span>');
+                        updateInfoPanel('-', '-', '-');
+                    }
+                }).fail(() => alert('Failed to stop bot.'));
+            });
 
-        // --- Initial Page Load ---
-        // Ensure buttons are in the correct initial state
-        stopBtn.disabled = true;
+             function pollStatus() {
+                $.get('/status', function(data) {
+                    if (data.bot_running) {
+                        updateInfoPanel(data.config.scrip_name, data.config.scrip_code, data.config.initial_quantity);
+                        
+                        $('#current_ltp').text(data.current_ltp.toFixed(2));
+                        $('#avg_price').text(data.portfolio_status.current_average_price.toFixed(2));
+                        $('#quantity').text(data.portfolio_status.current_total_quantity);
+
+                        const unrealizedPnl = data.portfolio_status.unrealized_pnl;
+                        const realizedPnl = data.portfolio_status.realized_pnl;
+                        const netPnl = data.portfolio_status.net_pnl;
+
+                        $('#unrealized_pnl').text(unrealizedPnl.toFixed(2)).removeClass('status-positive status-negative').addClass(unrealizedPnl >= 0 ? 'status-positive' : 'status-negative');
+                        $('#realized_pnl').text(realizedPnl.toFixed(2)).removeClass('status-positive status-negative').addClass(realizedPnl >= 0 ? 'status-positive' : 'status-negative');
+                        $('#net_pnl').text(netPnl.toFixed(2)).removeClass('status-positive status-negative').addClass(netPnl >= 0 ? 'status-positive' : 'status-negative');
+                        
+                        setTimeout(pollStatus, 2000);
+                    } else {
+                        if ($('#bot_status').text().includes('Running')) {
+                            $('#bot_status').html('Status: <span class="text-gray-400">Idle</span>');
+                        }
+                        $('#current_ltp, #avg_price, #quantity, #unrealized_pnl, #realized_pnl, #net_pnl').text('-').removeClass('status-positive status-negative');
+                    }
+                }).fail(() => console.error('Status polling failed.'));
+            }
+
+            function pollOrders() {
+                $.get('/orders', function(data) {
+                    const tbody = $('#order_history');
+                    tbody.empty();
+                    if (data.orders.length === 0) {
+                        tbody.append('<tr><td colspan="5" class="text-center p-4 text-gray-500">No orders yet.</td></tr>');
+                    } else {
+                        data.orders.forEach(order => {
+                            tbody.append(`
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                                    <td class="p-3 text-gray-400">${order.timestamp}</td>
+                                    <td class="p-3 font-semibold ${order.side === 'BUY' ? 'text-green-400' : 'text-red-400'}">${order.side}</td>
+                                    <td class="p-3">${order.quantity}</td>
+                                    <td class="p-3">${order.price.toFixed(2)}</td>
+                                    <td class="p-3 text-gray-500">${order.order_id}</td>
+                                </tr>
+                            `);
+                        });
+                    }
+                    if ($('#bot_status').text().includes('Running')) {
+                        setTimeout(pollOrders, 2000);
+                    }
+                }).fail(() => console.error('Orders polling failed.'));
+            }
+
+            function pollLogs() {
+                $.get('/logs', function(data) {
+                    const logsDiv = $('#logs');
+                    logsDiv.empty();
+                    if (data.logs.length > 0) {
+                         data.logs.forEach(log => {
+                            logsDiv.append(`<p class="text-gray-400">${log}</p>`);
+                        });
+                    } else {
+                        logsDiv.append(`<p class="text-gray-500">Logs will appear here when the bot is running...</p>`);
+                    }
+                   
+                    logsDiv.scrollTop(logsDiv[0].scrollHeight);
+                    if ($('#bot_status').text().includes('Running')) {
+                        setTimeout(pollLogs, 2000);
+                    }
+                }).fail(() => console.error('Logs polling failed.'));
+            }
+
+            updateDropdowns(); 
+            // Check if bot is already running on page load
+            pollStatus();
+        });
     </script>
 </body>
 </html>
