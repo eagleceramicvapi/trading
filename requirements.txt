@@ -2,5 +2,3 @@ Flask
 requests
 pandas
 gunicorn
-git add scriptmaster.csv
-git commit -m Add scriptmaster.csv
