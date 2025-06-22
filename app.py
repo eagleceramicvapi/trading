@@ -56,7 +56,7 @@ def load_csv_data():
     """Load CSV data for script details"""
     global df
     try:
-        df = pd.read_csv('script_data.csv')
+        df = pd.read_csv('scripmaster.csv')
         logging.info(f"CSV loaded successfully. Columns: {df.columns.tolist()}, Data shape: {df.shape}")
     except FileNotFoundError:
         logging.info("CSV file not found. Creating sample data...")
